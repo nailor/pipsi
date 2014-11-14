@@ -148,7 +148,7 @@ class Repo(object):
 
         return rv
 
-    def install(self, package, python=None, editable=False):
+    def install(self, package, python=None, editable=False, pip_arguments=None):
         package, install_args = self.resolve_package(package, python)
 
         venv_path = self.get_package_path(package)
@@ -183,6 +183,8 @@ class Repo(object):
             args = [os.path.join(venv_path, 'bin', 'pip'), 'install']
             if editable:
                 args.append('--editable')
+            if pip_arguments:
+                args.extend(pip_arguments)
 
             if Popen(args + install_args).wait() != 0:
                 click.echo('Failed to pip install.  Aborting.')
@@ -211,7 +213,7 @@ class Repo(object):
         paths.extend(self.find_installed_executables(path))
         return UninstallInfo(package, paths)
 
-    def upgrade(self, package, editable=False):
+    def upgrade(self, package, editable=False, pip_arguments=None):
         package, install_args = self.resolve_package(package)
 
         venv_path = self.get_package_path(package)
@@ -225,6 +227,8 @@ class Repo(object):
 
         args = [os.path.join(venv_path, 'bin', 'pip'), 'install',
                 '--upgrade']
+        if pip_arguments:
+            args.extend(pip_arguments)
         if editable:
             args.append('--editable')
 
@@ -297,15 +301,18 @@ def cli(repo, home, bin_dir):
 @click.option('--editable', is_flag=True,
               help='Enable editable installation.  This only works for '
                    'locally installed packages.')
+@click.option('--pip-arg', multiple=True,
+              help='Extra arguments to be passed to pip. '
+              'Can be given multiple times.')
 @pass_repo
-def install(repo, package, python, editable):
+def install(repo, package, python, editable, pip_arg):
     """Installs scripts from a Python package.
 
     Given a package this will install all the scripts and their dependencies
     of the given Python package into a new virtualenv and symlinks the
     discovered scripts into BIN_DIR (defaults to ~/.local/bin).
     """
-    if repo.install(package, python, editable):
+    if repo.install(package, python, editable, pip_arg):
         click.echo('Done.')
 
 
@@ -314,10 +321,12 @@ def install(repo, package, python, editable):
 @click.option('--editable', is_flag=True,
               help='Enable editable installation.  This only works for '
                    'locally installed packages.')
+@click.option('--pip-arg', multiple=True,
+              help='Extra arguments to be passed to pip')
 @pass_repo
-def upgrade(repo, package, editable):
+def upgrade(repo, package, editable, pip_arg):
     """Upgrades an already installed package."""
-    if repo.upgrade(package, editable):
+    if repo.upgrade(package, editable, pip_arg):
         click.echo('Done.')
 
 
